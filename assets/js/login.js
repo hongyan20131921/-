@@ -1,83 +1,119 @@
 $(function () {
-    // 入口函数
-    // --------------------------  切换登录和注册的盒子 -------------
-    // 点击去注册
-    $('.login a').click(function () {
-        $('.login').hide().next().show();
-    });
+  // 去注册账号
+  $('#goToRegi').click(function () {
+    // 显示注册
+    $('.register').show();
+    // 隐藏登录
+    $('.login').hide();
+  });
 
-    // 点击去登录
-    $('.register a').click(function () {
-        $('.register').hide().prev().show();
-    });
+  // 去登录
+  $('#goToLogin').click(function () {
+    // 隐藏注册
+    $('.register').hide();
+    // 显示登录
+    $('.login').show();
+  });
 
-    let layer = layui.layer; // 加载弹出层模块
-    // --------------------- 完成注册功能 ---------------------
-    $('.register form').on('submit', function (e) {
-        e.preventDefault();
-        // 获取表单中的数据
-        let data = $(this).serialize(); // serialize是根据表单各项的name属性获取值的，所以要检查表单各项的name属性
-        // 发送ajax请求到接口，完成注册
-        $.ajax({
-            type: 'POST',
-            url: '/api/reguser',
-            data: data,
-            success: function (res) {
-                // alert(res.message);
-                layer.msg(res.message);
-                if (res.status === 0) {
-                    // 注册成功，让登陆的盒子显示
-                    $('.register').hide().prev().show();
-                }
-            }
-        });
-    });
+  // 从layui中获取form表单相关的功能 ==> 注意一定要如此操作，否则直接使用form会报错
+  let form = layui.form;
+  let layer = layui.layer; // layer 弹框功能
 
-    // -----------------------------   表单验证  --------------
-    // 1. 加载表单（form）模块
-    let form = layui.form;
-    // 2. 使用form.verify()方法实现表单验证
-    form.verify({
-        // 第一个验证规则，验证密码长度必须是6~12位
-        // key: value
-        // 验证规则: array|function
-        // pwd: ['正则', '验证不通过时的提示'],
-        // pwd: [/^\S{6,12}$/, '密码长度必须是6~12位，并且不能有空格']
-        pwd: function (value) {
-            // value表示使用验证规则的输入框的值
-            if (!/^\S{6,12}$/.test(value)) {
-                return '密码长度必须是6~12位，并且不能有空格';
-            }
-        },
-        // 验证两次密码
-        repwd: function (value) {
-            // value 表示确认密码
-            let pwd = $('.reg-password').val().trim(); // 获取密码
-            if (value !== pwd) {
-                return '两次密码不一致';
-            }
+  // 表单的自定义校验规则
+  form.verify({
+    // 我们既支持上述函数式的方式，也支持下述数组的形式
+    // 数组的两个值分别代表：[正则匹配、匹配不符时的提示文字]
+    // pass 是密码的校验规则
+    pass: [/^[\S]{6,12}$/, '密码必须6到12位，且不能出现空格'],
+    // repass 就是两次输入的密码需要一致
+    repass: function (value, item) {
+      // 通过value 和 密码框的值做比较，如果不一致，弹框提示
+      // value：表单的值、item：表单的DOM对象
+      // console.log(value); // 再次输入的密码
+      // console.log($(".passIpt").val()); // 密码框的值
+
+      if (value !== $('.passIpt').val()) {
+        return '两次输入的密码不一致';
+      }
+    },
+  });
+
+  // 实现注册功能
+  // 1. 当form表单提交的时候，触发表单的submit提交功能 ==> 注册form的submit事件
+  // 2. 阻止form表单的默认行为
+  // 3. 收集表单中数据（用户名 、 密码） ==> jQ的serialize() form中带有name属性的值
+  // 4. 发送ajax ==> 照着接口文档
+
+  // 1.
+  $('#regiForm').on('submit', function (e) {
+    // 2.
+    e.preventDefault();
+
+    // 3.
+    let data = $(this).serialize();
+    // console.log(data);
+
+    // 4.
+    $.ajax({
+      type: 'POST',
+      url: 'http://ajax.frontend.itheima.net/api/reguser',
+      data,
+      success: function (res) {
+        console.log(res);
+
+        if (res.status !== 0) {
+          // 注册失败
+          // return console.log(res.message);
+          return layer.msg(res.message);
         }
+
+        // 注册成功
+        // console.log("注册成功");
+        layer.msg('注册成功');
+
+        // 清空注册的form表单
+        $('#regiForm')[0].reset();
+
+        // 去登录 ==> 触发其点击功能
+        $('#goToLogin').click();
+      },
     });
+  });
 
-    // --------------------------  完成登录功能 ---------------------------
-    $('.login form').on('submit', function (e) {
-        e.preventDefault();
-        // 获取账号和密码
-        // 提交给接口，完成登录。登录成功，跳转到 index.html （index.html是项目的首页面）
-        $.ajax({
-            type: 'POST',
-            url: '/api/login',
-            data: $(this).serialize(), // 检查表单各项的name属性值
-            success: function (res) {
-                layer.msg(res.message);
-                if (res.status === 0) {
-                    // 登录成功，先保存token（令牌）
-                    localStorage.setItem('token', res.token);
-                    // 登录成功，跳转到index.html
-                    location.href = '/index.html';
-                }
-            }
-        });
-    })
+  // 登录功能
+  $('#loginForm').on('submit', function (e) {
+    e.preventDefault();
 
+    let data = $(this).serialize();
+
+    $.ajax({
+      type: 'POST',
+      url: 'http://ajax.frontend.itheima.net/api/login',
+      data,
+      success: function (res) {
+        // console.log(res);
+
+        if (res.status !== 0) {
+          // 登录失败
+          return layer.msg(res.message);
+        }
+
+        // 登录成功
+        // layer.msg("登录成功, 即将跳转到首页");
+        // 跳转页面 ==> 弹框刚出现，就跳转了（弹框关闭之后在跳转）
+        // location.href = "/home/index.html";
+
+        // 上面代码的改写
+        layer.msg(
+          '登录成功, 即将跳转到首页',
+          {
+            time: 2000, // 2秒后关闭，关闭之后在跳转
+          },
+          function () {
+            location.href = '/home/index.html';
+          }
+        );
+      },
+    });
+  });
 });
